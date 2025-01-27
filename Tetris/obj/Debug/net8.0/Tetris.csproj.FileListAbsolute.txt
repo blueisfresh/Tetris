@@ -12,3 +12,4 @@
 /Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/obj/Debug/net8.0/Tetris.pdb
 /Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/obj/Debug/net8.0/Tetris.genruntimeconfig.cache
 /Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/obj/Debug/net8.0/ref/Tetris.dll
+/Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/obj/Debug/net8.0/Tetris.sourcelink.json

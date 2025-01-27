@@ -1,5 +1,7 @@
-﻿namespace Tetris;
+﻿using System.Security.Claims;
+using System;
 
+namespace Tetris;
 class Program
 {
     public static List<Option> options;
@@ -8,12 +10,62 @@ class Program
     {
         
         // Tetris tetris = new Tetris();
-
+        
         options = new List<Option>
         {
-            new Option("Thing", () => WriteTemporaryMessage("Hi")),
-            new Option("Another Thing", () => WriteTemporaryMessage("How Are You")),
-            new Option("Yet Another Thing", () => WriteTemporaryMessage("Today")),
+            new Option("Own Ip Adress", () =>
+            {
+                Console.Clear();    
+                Console.WriteLine(IpManager.GetLocalNetworkIpAddress());
+                
+                // Get back to the menu
+                ReturnToMenu();
+            }),
+            new Option("Add New IP Address", () =>
+            {
+                Console.Clear();
+                Console.WriteLine("Please enter a new IP address.");
+                
+                string input = Console.ReadLine();
+
+                if (IpManager.IsValidIpAddress(input))
+                {
+                    IpManager.IpAdresses.Add(input);
+                    Console.WriteLine("New IP Address added succesfully");
+                }else
+                {
+                    Console.WriteLine("Invalid IP address. Press any key to try again...");
+                }
+                
+                // Get back to the menu
+                ReturnToMenu();
+            }),
+            new Option("See all ip Adresses", () =>
+            {
+                Console.Clear();
+                Console.WriteLine("All Currently saved Ip Addresses:");
+                
+                foreach (string ipAddress in IpManager.IpAdresses)
+                {
+                    Console.WriteLine(ipAddress);
+                }
+                
+                // Get back to the menu
+                ReturnToMenu();
+            }),
+            new Option("Test Connection", () =>
+            {
+                Console.Clear();
+                Console.WriteLine("Current Conectioln Status:");
+                
+                foreach (string ipAddress in IpManager.IpAdresses)
+                {
+                    Console.WriteLine($"{ipAddress} - {(IpManager.CanConnectTo(ipAddress) ? "ok" : "not ok!")}");
+                }
+                
+                // Get back to the menu
+                ReturnToMenu();
+            }),
             new Option("Exit", () => Environment.Exit(0)),
         };
 
@@ -60,13 +112,6 @@ class Program
         // Starting of Tetris logic in Tetris class
         //tetris.Main(); 
     }
-    
-    public static void WriteTemporaryMessage(string message)
-    {
-        // Console.Clear();
-        Console.Write(message);
-        WriteMenu(options, options.First());
-    }
 
     public static void WriteMenu(List<Option> options, Option selectedOption)
     {
@@ -84,5 +129,13 @@ class Program
             }
             Console.WriteLine(option.Name);
         }
+    }
+    
+    private static void ReturnToMenu()
+    {
+        Console.WriteLine("\nPress any key to return to the menu...");
+        Console.ReadKey();
+        Console.Clear();
+        WriteMenu(options, options.First());
     }
 }
