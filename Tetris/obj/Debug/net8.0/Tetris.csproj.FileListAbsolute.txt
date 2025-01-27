@@ -1,0 +1,14 @@
+/Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/bin/Debug/net8.0/Tetris
+/Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/bin/Debug/net8.0/Tetris.deps.json
+/Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/bin/Debug/net8.0/Tetris.runtimeconfig.json
+/Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/bin/Debug/net8.0/Tetris.dll
+/Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/bin/Debug/net8.0/Tetris.pdb
+/Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/obj/Debug/net8.0/Tetris.GeneratedMSBuildEditorConfig.editorconfig
+/Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/obj/Debug/net8.0/Tetris.AssemblyInfoInputs.cache
+/Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/obj/Debug/net8.0/Tetris.AssemblyInfo.cs
+/Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/obj/Debug/net8.0/Tetris.csproj.CoreCompileInputs.cache
+/Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/obj/Debug/net8.0/Tetris.dll
+/Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/obj/Debug/net8.0/refint/Tetris.dll
+/Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/obj/Debug/net8.0/Tetris.pdb
+/Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/obj/Debug/net8.0/Tetris.genruntimeconfig.cache
+/Users/elias/Documents/Dev/Projects/Own/Tetris/Tetris/obj/Debug/net8.0/ref/Tetris.dll
