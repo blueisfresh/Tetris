@@ -3,6 +3,8 @@ using System;
 
 namespace Tetris;
 
+// TODO: Loading Text When testing connection 
+// TODO: Singletone class for ipmanager 
 class Program
 {
     // Main Game Logic
@@ -50,8 +52,7 @@ class Program
                 {
                     Console.Clear();
                     Console.WriteLine($"Selected IP Address: {ip}");
-                    Console.WriteLine("\nPress any key to return...");
-                    Console.ReadKey();
+                    ReturnToMenu();
                 },
                 new Dictionary<ConsoleKey, Action<int>> // Custom key behavior
                 {
