@@ -6,58 +6,13 @@ namespace Tetris;
 
 public class IpManager
 {
-    public static List<string> IpAdresses = new List<string>();
-    
-    /*
-    public static string GetLocalIpAddress()
+    public static List<string> IpAdresses = new List<string>()
     {
-        UnicastIPAddressInformation mostSuitableIp = null;
-
-        var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces();
-
-        foreach (var network in networkInterfaces)
-        {
-            if (network.OperationalStatus != OperationalStatus.Up)
-                continue;
-
-            var properties = network.GetIPProperties();
-
-            if (properties.GatewayAddresses.Count == 0)
-                continue;
-
-            foreach (var address in properties.UnicastAddresses)
-            {
-                if (address.Address.AddressFamily != AddressFamily.InterNetwork)
-                    continue;
-
-                if (IPAddress.IsLoopback(address.Address))
-                    continue;
-
-                if (!address.IsDnsEligible)
-                {
-                    if (mostSuitableIp == null)
-                        mostSuitableIp = address;
-                    continue;
-                }
-
-                // The best IP is the IP got from DHCP server
-                if (address.PrefixOrigin != PrefixOrigin.Dhcp)
-                {
-                    if (mostSuitableIp == null || !mostSuitableIp.IsDnsEligible)
-                        mostSuitableIp = address;
-                    continue;
-                }
-
-                return address.Address.ToString();
-            }
-        }
-
-        return mostSuitableIp != null 
-            ? mostSuitableIp.Address.ToString()
-            : "";
-    }
-    */
+        "192.168.1.11",
+        "192.168.1.9"
+    };
     
+    // option to display localipadress
     public static string GetLocalIpAddress()
     {
         var host = Dns.GetHostEntry(Dns.GetHostName());
@@ -71,8 +26,6 @@ public class IpManager
         throw new Exception("No network adapters with an IPv4 address in the system!");
     }
     
-    
-
     public static string GetLocalNetworkIpAddress()
     {
         foreach (var networkInterface in NetworkInterface.GetAllNetworkInterfaces())

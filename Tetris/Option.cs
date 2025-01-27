@@ -10,4 +10,10 @@ public class Option
         Name = name;
         Selected = selected;
     }
+
+    // Override ToString to display the Name
+    public override string ToString()
+    {
+        return Name;
+    }
 }

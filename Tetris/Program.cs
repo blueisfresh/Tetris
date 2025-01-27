@@ -2,124 +2,121 @@
 using System;
 
 namespace Tetris;
+
 class Program
 {
-    public static List<Option> options;
+    // Main Game Logic
+    // Tetris tetris = new Tetris();
+
+    public static List<Option> options = new List<Option>
+    {
+        new Option("Own Ip Adress", () =>
+        {
+            Console.Clear();
+            Console.WriteLine(IpManager.GetLocalNetworkIpAddress());
+            ReturnToMenu();
+        }),
+        new Option("Add New IP Address", () =>
+        {
+            Console.Clear();
+            Console.WriteLine("Please enter a new IP address.");
+
+            string input = Console.ReadLine();
+
+            if (IpManager.IsValidIpAddress(input))
+            {
+                IpManager.IpAdresses.Add(input);
+                Console.WriteLine("New IP Address added succesfully");
+            }
+            else
+            {
+                Console.WriteLine("Invalid IP address. Press any key to try again...");
+            }
+
+            ReturnToMenu();
+        }),
+        new Option("See All IP Addresses", () =>
+        {
+            if (IpManager.IpAdresses.Count == 0)
+            {
+                Console.WriteLine("No IP addresses saved.");
+                ReturnToMenu();
+                return;
+            }
+
+            NavigateList(
+                IpManager.IpAdresses,
+                ip =>
+                {
+                    Console.Clear();
+                    Console.WriteLine($"Selected IP Address: {ip}");
+                    Console.WriteLine("\nPress any key to return...");
+                    Console.ReadKey();
+                },
+                new Dictionary<ConsoleKey, Action<int>> // Custom key behavior
+                {
+                    {
+                        ConsoleKey.X, index =>
+                        {
+                            Console.Clear();
+                            Console.WriteLine($"Are you sure you want to delete {IpManager.IpAdresses[index]}? (y/n)");
+                            var confirmation = Console.ReadKey(true).Key;
+                            if (confirmation == ConsoleKey.Y)
+                            {
+                                Console.WriteLine($"{IpManager.IpAdresses[index]} deleted.");
+                                IpManager.IpAdresses.RemoveAt(index);
+
+                                if (IpManager.IpAdresses.Count == 0)
+                                {
+                                    Console.WriteLine("No more IP addresses to display.");
+                                    ReturnToMenu();
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine("Deletion cancelled.");
+                            }
+
+                            Console.WriteLine("\nPress any key to continue...");
+                            Console.ReadKey();
+                        }
+                    }
+                });
+        }),
+        new Option("Test Connection", () =>
+        {
+            Console.Clear();
+            Console.WriteLine("Current Conectioln Status:");
+
+            foreach (string ipAddress in IpManager.IpAdresses)
+            {
+                Console.WriteLine($"{ipAddress} - {(IpManager.CanConnectTo(ipAddress) ? "ok" : "not ok!")}");
+            }
+
+            ReturnToMenu();
+        }),
+        new Option("Exit", () => Environment.Exit(0)),
+    };
 
     static void Main(string[] args)
     {
-        
-        // Tetris tetris = new Tetris();
-        
-        options = new List<Option>
+        while (true)
         {
-            new Option("Own Ip Adress", () =>
-            {
-                Console.Clear();    
-                Console.WriteLine(IpManager.GetLocalNetworkIpAddress());
-                
-                // Get back to the menu
-                ReturnToMenu();
-            }),
-            new Option("Add New IP Address", () =>
-            {
-                Console.Clear();
-                Console.WriteLine("Please enter a new IP address.");
-                
-                string input = Console.ReadLine();
-
-                if (IpManager.IsValidIpAddress(input))
-                {
-                    IpManager.IpAdresses.Add(input);
-                    Console.WriteLine("New IP Address added succesfully");
-                }else
-                {
-                    Console.WriteLine("Invalid IP address. Press any key to try again...");
-                }
-                
-                // Get back to the menu
-                ReturnToMenu();
-            }),
-            new Option("See all ip Adresses", () =>
-            {
-                Console.Clear();
-                Console.WriteLine("All Currently saved Ip Addresses:");
-                
-                foreach (string ipAddress in IpManager.IpAdresses)
-                {
-                    Console.WriteLine(ipAddress);
-                }
-                
-                // Get back to the menu
-                ReturnToMenu();
-            }),
-            new Option("Test Connection", () =>
-            {
-                Console.Clear();
-                Console.WriteLine("Current Conectioln Status:");
-                
-                foreach (string ipAddress in IpManager.IpAdresses)
-                {
-                    Console.WriteLine($"{ipAddress} - {(IpManager.CanConnectTo(ipAddress) ? "ok" : "not ok!")}");
-                }
-                
-                // Get back to the menu
-                ReturnToMenu();
-            }),
-            new Option("Exit", () => Environment.Exit(0)),
-        };
-
-        // Index of the selected item (default = the first one)
-        int index = 0;
-        
-        // Write the menu out
-        WriteMenu(options, options[index]);
-
-        ConsoleKeyInfo keyInfo;
-
-        do
-        {
-            keyInfo = Console.ReadKey();
-
-            if (keyInfo.Key == ConsoleKey.DownArrow)
-            {
-                if (index + 1 < options.Count)
-                {
-                    index++;
-                    WriteMenu(options, options[index]);
-                }
-            }
-
-            if (keyInfo.Key == ConsoleKey.UpArrow)
-            {
-                if (index - 1 < options.Count)
-                {
-                    index--;
-                    WriteMenu(options, options[index]);
-                }
-            }
-            
-            // Handle different action for the option
-            if (keyInfo.Key == ConsoleKey.Enter)
-            {
-                options[index].Selected.Invoke();
-                index = 0;
-            }
-        }while(keyInfo.Key != ConsoleKey.Escape);
-        
-        Console.ReadKey();
+            NavigateList(options, option => { option.Selected.Invoke(); });
+        }
 
         // Starting of Tetris logic in Tetris class
         //tetris.Main(); 
     }
 
-    public static void WriteMenu(List<Option> options, Option selectedOption)
+    public static void DisplaySelection<T>(List<T> options, T selectedOption)
     {
         Console.Clear();
 
-        foreach (Option option in options)
+        foreach (var option in options)
         {
-            if (option == selectedOption)
+            if (EqualityComparer<T>.Default.Equals(option, selectedOption))
             {
                 Console.Write(">");
             }
@@ -127,15 +124,66 @@ class Program
             {
                 Console.Write(" ");
             }
-            Console.WriteLine(option.Name);
+
+            Console.WriteLine(option.ToString());
         }
     }
-    
+
     private static void ReturnToMenu()
     {
         Console.WriteLine("\nPress any key to return to the menu...");
         Console.ReadKey();
         Console.Clear();
-        WriteMenu(options, options.First());
+    }
+
+    public static void NavigateList<T>(List<T> options, Action<T> onSelect,
+        Dictionary<ConsoleKey, Action<int>> customKeyActions = null)
+    {
+        // Return empty items List
+        if (options == null || options.Count == 0)
+        {
+            Console.WriteLine("Nothing to display");
+            ReturnToMenu();
+            return;
+        }
+
+        // Variables
+        int index = 0;
+        ConsoleKey key;
+
+        do
+        {
+            DisplaySelection(options, options[index]);
+
+            key = Console.ReadKey(true).Key;
+            
+            // Custom Key action 
+            
+            if (customKeyActions != null && customKeyActions.ContainsKey(key))
+            {
+                // Execute custom action (like delete) and pass the current index
+                customKeyActions[key].Invoke(index);
+                continue; // Skip other actions after a custom action is executed
+            }
+
+            switch (key)
+            {
+                case ConsoleKey.UpArrow:
+                    index = (index > 0) ? index - 1 : 0;
+                    break;
+                case ConsoleKey.DownArrow:
+                    index = (index < options.Count - 1) ? index + 1 : index;
+                    break;
+                case ConsoleKey.Enter:
+                    onSelect(options[index]); // Execute action on the selected item
+                    return; // Exit navigation after selection
+                case ConsoleKey.Escape:
+                    break;
+                default:
+                    Console.WriteLine(
+                        "Invalid key. Please use Up, Down, Enter, or Escape."); // Handle unrecognized keys
+                    break;
+            }
+        } while (true);
     }
 }
