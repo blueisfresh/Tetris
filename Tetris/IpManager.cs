@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -58,16 +59,29 @@ public class IpManager
 
     public static bool CanConnectTo(string ip)
     {
-        Ping ping = new Ping();
-
-        IPAddress address = IPAddress.Parse(ip); 
-        
-        PingReply pong = ping.Send(address);
-        if (pong.Status == IPStatus.Success)
+        try
         {
-            return true;
-        } 
-        
-        return false;
+            // Display the Ip address and Loading line in the same loop
+            Console.Write($"\n{ip} - Loading");
+
+            Ping ping = new Ping();
+            IPAddress address = IPAddress.Parse(ip);
+
+            // Perform pinging 
+            PingReply pong = ping.Send(address);
+            
+            // Update the message directly on the same line
+            Console.SetCursorPosition(0, Console.CursorTop);
+            Console.Write($"{ip} - {(pong.Status == IPStatus.Success ? "ok" : "not ok!")}        ");
+            
+            return pong.Status == IPStatus.Success;
+        }
+        catch (Exception e)
+        {
+            Console.SetCursorPosition(0, Console.CursorTop);
+            Console.Write($"{ip} - not ok!        "); // Ensure the line is completely overwritten
+            Debug.WriteLine(e);
+            return false;
+        }
     }
 }

@@ -3,7 +3,6 @@ using System;
 
 namespace Tetris;
 
-// TODO: Loading Text When testing connection 
 // TODO: Singletone class for ipmanager 
 class Program
 {
@@ -92,7 +91,7 @@ class Program
 
             foreach (string ipAddress in IpManager.IpAdresses)
             {
-                Console.WriteLine($"{ipAddress} - {(IpManager.CanConnectTo(ipAddress) ? "ok" : "not ok!")}");
+                IpManager.CanConnectTo(ipAddress);
             }
 
             ReturnToMenu();
