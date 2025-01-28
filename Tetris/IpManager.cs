@@ -5,16 +5,41 @@ using System.Net.Sockets;
 
 namespace Tetris;
 
-public class IpManager
+public sealed class IpManager
 {
-    public static List<string> IpAdresses = new List<string>()
+    private static IpManager instance = null!;
+    
+    private static readonly object padlock = new object();
+
+    IpManager()
+    {
+        
+    }
+
+    public static IpManager Instance
+    {
+        get
+        {
+            lock (padlock)
+            {
+                if (instance == null)
+                {
+                    instance = new IpManager();
+                }
+                
+                return instance;
+            }
+        }
+    }
+    
+    public List<string> IpAdresses = new List<string>()
     {
         "192.168.1.11",
         "192.168.1.9"
     };
     
     // option to display localipadress
-    public static string GetLocalIpAddress()
+    public string GetLocalIpAddress()
     {
         var host = Dns.GetHostEntry(Dns.GetHostName());
         foreach (var ip in host.AddressList)
@@ -27,7 +52,7 @@ public class IpManager
         throw new Exception("No network adapters with an IPv4 address in the system!");
     }
     
-    public static string GetLocalNetworkIpAddress()
+    public string GetLocalNetworkIpAddress()
     {
         foreach (var networkInterface in NetworkInterface.GetAllNetworkInterfaces())
         {
@@ -52,12 +77,12 @@ public class IpManager
         return "No local network IP address found.";
     }
     
-    public static bool IsValidIpAddress(string ip)
+    public bool IsValidIpAddress(string ip)
     {
         return System.Net.IPAddress.TryParse(ip, out _);
     }
 
-    public static bool CanConnectTo(string ip)
+    public bool CanConnectTo(string ip)
     {
         try
         {

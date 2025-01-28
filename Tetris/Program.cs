@@ -2,19 +2,20 @@
 using System;
 
 namespace Tetris;
-
-// TODO: Singletone class for ipmanager 
 class Program
 {
     // Main Game Logic
     // Tetris tetris = new Tetris();
+    
+    // Access the singleton instance
+    private static readonly IpManager ipManager = IpManager.Instance;
 
     public static List<Option> options = new List<Option>
     {
         new Option("Own Ip Adress", () =>
         {
             Console.Clear();
-            Console.WriteLine(IpManager.GetLocalNetworkIpAddress());
+            Console.WriteLine(ipManager.GetLocalNetworkIpAddress());
             ReturnToMenu();
         }),
         new Option("Add New IP Address", () =>
@@ -24,9 +25,9 @@ class Program
 
             string input = Console.ReadLine();
 
-            if (IpManager.IsValidIpAddress(input))
+            if (ipManager.IsValidIpAddress(input))
             {
-                IpManager.IpAdresses.Add(input);
+                ipManager.IpAdresses.Add(input);
                 Console.WriteLine("New IP Address added succesfully");
             }
             else
@@ -38,7 +39,7 @@ class Program
         }),
         new Option("See All IP Addresses", () =>
         {
-            if (IpManager.IpAdresses.Count == 0)
+            if (ipManager.IpAdresses.Count == 0)
             {
                 Console.WriteLine("No IP addresses saved.");
                 ReturnToMenu();
@@ -46,7 +47,7 @@ class Program
             }
 
             NavigateList(
-                IpManager.IpAdresses,
+                ipManager.IpAdresses,
                 ip =>
                 {
                     Console.Clear();
@@ -59,14 +60,14 @@ class Program
                         ConsoleKey.X, index =>
                         {
                             Console.Clear();
-                            Console.WriteLine($"Are you sure you want to delete {IpManager.IpAdresses[index]}? (y/n)");
+                            Console.WriteLine($"Are you sure you want to delete {ipManager.IpAdresses[index]}? (y/n)");
                             var confirmation = Console.ReadKey(true).Key;
                             if (confirmation == ConsoleKey.Y)
                             {
-                                Console.WriteLine($"{IpManager.IpAdresses[index]} deleted.");
-                                IpManager.IpAdresses.RemoveAt(index);
+                                Console.WriteLine($"{ipManager.IpAdresses[index]} deleted.");
+                                ipManager.IpAdresses.RemoveAt(index);
 
-                                if (IpManager.IpAdresses.Count == 0)
+                                if (ipManager.IpAdresses.Count == 0)
                                 {
                                     Console.WriteLine("No more IP addresses to display.");
                                     ReturnToMenu();
@@ -89,9 +90,9 @@ class Program
             Console.Clear();
             Console.WriteLine("Current Conectioln Status:");
 
-            foreach (string ipAddress in IpManager.IpAdresses)
+            foreach (string ipAddress in ipManager.IpAdresses)
             {
-                IpManager.CanConnectTo(ipAddress);
+                ipManager.CanConnectTo(ipAddress);
             }
 
             ReturnToMenu();
