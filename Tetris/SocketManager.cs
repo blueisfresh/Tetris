@@ -6,6 +6,8 @@ namespace Tetris;
 
 public class SocketManager
 {
+    
+    // TODO: Add the socket communication between client and server
     private static IPAddress ipAddress;
     
     IPEndPoint ipEndPoint = new(ipAddress, 500);

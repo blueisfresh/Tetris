@@ -4,9 +4,6 @@ using System;
 namespace Tetris;
 class Program
 {
-    // Main Game Logic
-    // Tetris tetris = new Tetris();
-    
     // Access the singleton instance
     private static readonly IpManager ipManager = IpManager.Instance;
 
@@ -16,6 +13,12 @@ class Program
         {
             Console.Clear();
             Console.WriteLine(ipManager.GetLocalNetworkIpAddress());
+            ReturnToMenu();
+        }),
+        new Option("Start Game", () =>
+        {
+            Console.Clear();
+            Tetris.Run();
             ReturnToMenu();
         }),
         new Option("Add New IP Address", () =>
