@@ -34,22 +34,42 @@ public static class Tetris
     
     // Gameloop boolean
     public static bool gameOver = false;
+    
+    // Leave the tetris game loop when enter is pressed
+    private static bool exitGame = false;
+    
+    public static void Run()
+    {
+        // Remove the Path from the console
+        Console.Clear();
+        
+        // Cursor not Visible
+        Console.CursorVisible = false;
+        
+        // Initialize and display the board immediately
+        InitializeBoard();
+        DisplayBoard();
 
+        // Run the Game-Loop
+        RunGameLoop();
+    }
     
     static void RunGameLoop()
     {
         gameOver = false;
+        gameOver = false;
         
-        while (!gameOver)
+        while (!gameOver && !exitGame) // Exit if either game is over or Enter is pressed
         {
             HandleInput();
 
-            // Spawne neue Tetrominos falls nötig
+            // Spawn new tetromino if necessary
             if (currentTetromino == null)
             {
                 SpawnTetromino();
             }
 
+            // Make the Tetromino drop after some time (gravity)
             if (gravityTimer.ElapsedMilliseconds >= gravityInterval)
             {
                 MoveTetromino(0, 1); // Move down
@@ -59,24 +79,22 @@ public static class Tetris
             // TODO: Update the board array with the newly moved Tetrominoes 
             
             DisplayBoard();
-        }
-        
-        // Spiel ist vorbei, Option zum Neustart oder Beenden
-        Console.Clear();
-        Console.WriteLine("Game Over! Press R to Reset or Escape to Quit.");
-
-        while (true)
-        {
-            var key = Console.ReadKey(true).Key;
-
-            if (key == ConsoleKey.R)
+            
+            // Check if Enter key is pressed
+            if (Console.KeyAvailable)
             {
-                ResetGame();
-                RunGameLoop(); // Spiel neu starten
-            }
-            else if (key == ConsoleKey.Escape)
-            {
-                break; // Programm beenden
+                ConsoleKey key = Console.ReadKey(true).Key;
+                if (key == ConsoleKey.Enter)
+                {
+                    exitGame = true;
+                    break;
+                }
+
+                if (key == ConsoleKey.R)
+                {
+                    ResetGame();
+                    RunGameLoop();  
+                }
             }
         }
     }
@@ -310,28 +328,6 @@ public static class Tetris
             case ConsoleKey.S:
                 MoveTetromino(0, -1);
                 break;
-            case ConsoleKey.R:
-                ResetGame(); // Neustart des Spiels
-                RunGameLoop(); // Neustart der Hauptschleife
-                break;
-            case ConsoleKey.Escape:
-                gameOver = true;
-                break;
         }
-    }
-    public static void Run()
-    {
-        // Remove the Path from the console
-        Console.Clear();
-        
-        // Cursor not Visible
-        Console.CursorVisible = false;
-        
-        // Initialize and display the board immediately
-        InitializeBoard();
-        DisplayBoard();
-
-        // Run the Game-Loop
-        RunGameLoop();
     }
 }

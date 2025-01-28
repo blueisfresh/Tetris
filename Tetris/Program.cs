@@ -19,7 +19,9 @@ class Program
         {
             Console.Clear();
             Tetris.Run();
-            ReturnToMenu();
+            // TODO: How to display the menu when out of the loop 
+            //ReturnToMenu();
+            //Main();
         }),
         new Option("Add New IP Address", () =>
         {
