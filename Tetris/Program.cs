@@ -19,9 +19,8 @@ class Program
         {
             Console.Clear();
             Tetris.Run();
-            // TODO: How to display the menu when out of the loop 
-            //ReturnToMenu();
-            //Main();
+            // TODO: Display the menu again and return to the loop
+            RunMenu();
         }),
         new Option("Add New IP Address", () =>
         {
@@ -107,13 +106,18 @@ class Program
 
     static void Main(string[] args)
     {
+        RunMenu();
+    }
+
+    static void RunMenu()
+    {
+        // Avoid cleaning the screen unnecessary
+        Console.Clear();
+        
         while (true)
         {
             NavigateList(options, option => { option.Selected.Invoke(); });
         }
-
-        // Starting of Tetris logic in Tetris class
-        //tetris.Main(); 
     }
 
     public static void DisplaySelection<T>(List<T> options, T selectedOption)
@@ -137,9 +141,8 @@ class Program
 
     private static void ReturnToMenu()
     {
-        Console.WriteLine("\nPress any key to return to the menu...");
-        Console.ReadKey();
-        Console.Clear();
+        Console.WriteLine("\nPress Enter to return to the menu...");
+        while (Console.ReadKey(true).Key != ConsoleKey.Enter) { }
     }
 
     public static void NavigateList<T>(List<T> options, Action<T> onSelect,

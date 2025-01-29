@@ -40,6 +40,20 @@ public static class Tetris
     
     public static void Run()
     {
+        var inputThread = new Thread(() =>
+        {
+            while (!exitGame)
+            {
+                if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
+                {
+                    exitGame = true; // The background thread sets this
+                }
+            }
+        });
+        
+        inputThread.IsBackground = true; // Mark as background so it won't block app exit
+        inputThread.Start();
+        
         // Remove the Path from the console
         Console.Clear();
         
@@ -56,47 +70,53 @@ public static class Tetris
     
     static void RunGameLoop()
     {
-        gameOver = false;
-        gameOver = false;
-        
-        while (!gameOver && !exitGame) // Exit if either game is over or Enter is pressed
+        while (!exitGame) // Exit if Enter is pressed
         {
-            HandleInput();
+            gameOver = false;
 
-            // Spawn new tetromino if necessary
-            if (currentTetromino == null)
+            while (!gameOver)
             {
-                SpawnTetromino();
-            }
-
-            // Make the Tetromino drop after some time (gravity)
-            if (gravityTimer.ElapsedMilliseconds >= gravityInterval)
-            {
-                MoveTetromino(0, 1); // Move down
-                gravityTimer.Restart();
-            }
-            
-            // TODO: Update the board array with the newly moved Tetrominoes 
-            
-            DisplayBoard();
-            
-            // Check if Enter key is pressed
-            if (Console.KeyAvailable)
-            {
-                ConsoleKey key = Console.ReadKey(true).Key;
-                if (key == ConsoleKey.Enter)
+                HandleInput();
+                
+                // Spawn new tetromino if necessary
+                if (currentTetromino == null)
+                    SpawnTetromino();
+                
+                // Make the Tetromino drop after some time (gravity)
+                if (gravityTimer.ElapsedMilliseconds >= gravityInterval)
                 {
-                    exitGame = true;
-                    break;
+                    MoveTetromino(0, 1); // Move down
+                    gravityTimer.Restart();
                 }
+            
+                // TODO: Update the board array with the newly moved Tetrominoes 
+            
+                DisplayBoard();
 
+                // if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
+                // {
+                //     DisplayLoadingScreen("Loading");
+                //     exitGame = true;
+                //     break;
+                // }
+            }
+            
+            if (!gameOver || !exitGame)
+            {
+                Console.WriteLine("Game Over. Press R to restart or Enter to exit.");
+                var key = Console.ReadKey(true).Key;
                 if (key == ConsoleKey.R)
-                {
-                    ResetGame();
-                    RunGameLoop();  
-                }
+                    ResetGame(); // Restart game
+                else if (key == ConsoleKey.Enter)
+                    exitGame = true; // Exit game
             }
         }
+    }
+    
+    static void DisplayLoadingScreen(string message)
+    {
+        Console.Clear();
+        Console.WriteLine(message);
     }
 
     static void ResetGame()
@@ -104,6 +124,9 @@ public static class Tetris
         // Reset any necessary variables
         gameOver = false;
 
+        // enable spawning even after leaving the current game
+        currentTetromino = null; // Clear the active tetromino
+        
         // Reinitialize the board or other game state if needed
         InitializeBoard();
     }
@@ -288,7 +311,7 @@ public static class Tetris
     {
         
     }
-
+    
     static void DisplayBoard()
     {
         for (int y = 0; y < Height; y++)
