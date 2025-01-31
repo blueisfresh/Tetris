@@ -30,7 +30,7 @@ public static class Tetris
     
     // Gravity
     private static Stopwatch gravityTimer = new Stopwatch();
-    private static int gravityInterval = 500; // In Mi
+    private static int gravityInterval = 5000; // In Milliseconds
     
     // Gameloop boolean
     public static bool gameOver = false;
@@ -40,19 +40,29 @@ public static class Tetris
     
     public static void Run()
     {
-        var inputThread = new Thread(() =>
-        {
-            while (!exitGame)
-            {
-                if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
-                {
-                    exitGame = true; // The background thread sets this
-                }
-            }
-        });
+        // start gravity timer
+        gravityTimer.Start();
         
-        inputThread.IsBackground = true; // Mark as background so it won't block app exit
-        inputThread.Start();
+        // var inputThread = new Thread(() =>
+        // {
+        //     while (!exitGame)
+        //     {
+        //         if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
+        //         {
+        //             exitGame = true; // The background thread sets this
+        //         }
+        //     }
+        // });
+        //
+        // inputThread.IsBackground = true; // Mark as background so it won't block app exit
+        // inputThread.Start();
+        
+        // Restart Exit game bool 
+        if (exitGame)
+            exitGame = false;
+        
+        if (currentTetromino != null)
+            currentTetromino = null;
         
         // Remove the Path from the console
         Console.Clear();
@@ -93,12 +103,12 @@ public static class Tetris
             
                 DisplayBoard();
 
-                // if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
-                // {
-                //     DisplayLoadingScreen("Loading");
-                //     exitGame = true;
-                //     break;
-                // }
+                if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
+                {
+                    DisplayLoadingScreen("Loading");
+                    exitGame = true;
+                    break;
+                }
             }
             
             if (!gameOver || !exitGame)
@@ -165,10 +175,16 @@ public static class Tetris
                     int boardX = posX + x;
                     int boardY = posY + y;
 
-                    // Out of bounds or colliding with existing block
-                    if (boardX < 0 || boardX >= Width || boardY < 0 || boardY >= Height || board[boardX, boardY] != "░░")
+                    // Check if out of bounds
+                    if (boardX < 0 || boardX >= Width || boardY < 0 || boardY >= Height)
                     {
-                        return false;
+                        return false; // Out of bounds
+                    }
+
+                    // Check for collision
+                    if (board[boardY, boardX] != "░░") // Adjusted board access
+                    {
+                        return false; // Colliding with an existing block
                     }
                 }
             }
@@ -178,13 +194,14 @@ public static class Tetris
     
     static void PlaceTetromino(int[,] tetromino, int posX, int posY)
     {
+        // Corrected version:
         for (int y = 0; y < tetromino.GetLength(0); y++)
         {
             for (int x = 0; x < tetromino.GetLength(1); x++)
             {
-                if (tetromino[y, x] == 1) // Only place filled cells
+                if (tetromino[y, x] == 1) // Notice: we check [y, x] here
                 {
-                    board[posX + x, posY + y] = "██"; // Filled block
+                    board[posX + x, posY + y] = "██"; // Use [x, y] for the board
                 }
             }
         }
@@ -209,7 +226,7 @@ public static class Tetris
             // Place the tetromino at the new position
             PlaceTetromino(currentTetromino, currentX, currentY);
         }
-        else if (deltaY > 0) // If it's a downward move and can't proceed
+        else 
         {
             // Lock the tetromino and spawn a new one
             LockTetromino();
@@ -250,36 +267,38 @@ public static class Tetris
         {
             bool isRowFull = true;
 
+            // Check if row y is full
             for (int x = 0; x < Width; x++)
             {
-                if (board[y, x] == "░░") // If any cell is empty, the row isn't full
+                // Use board[x, y], not board[y, x]
+                if (board[x, y] == "░░")
                 {
                     isRowFull = false;
                     break;
                 }
             }
 
+            // If row is full, clear it and shift downward
             if (isRowFull)
             {
-                // Clear the row
+                // Clear row y
                 for (int x = 0; x < Width; x++)
                 {
-                    board[y, x] = "░░"; // Empty the row
+                    board[x, y] = "░░";
                 }
 
-                // Move rows above down
+                // Move everything above row y down by 1
                 for (int row = y; row > 0; row--)
                 {
                     for (int col = 0; col < Width; col++)
                     {
-                        board[row, col] = board[row - 1, col];
+                        board[col, row] = board[col, row - 1];
                     }
                 }
-
-                // Clear the topmost row
-                for (int x = 0; x < Width; x++)
+                // Top row empty
+                for (int col = 0; col < Width; col++)
                 {
-                    board[0, x] = "░░";
+                    board[col, 0] = "░░";
                 }
             }
         }
@@ -299,7 +318,7 @@ public static class Tetris
                     // Ensure within bounds before clearing
                     if (boardX >= 0 && boardX < Width && boardY >= 0 && boardY < Height)
                     {
-                        board[boardY, boardX] = "░░"; // Clear the cell
+                        board[boardX, boardY] = "░░"; // Clear the cell
                     }
                 }
             }
