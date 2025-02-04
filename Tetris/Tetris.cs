@@ -1,375 +1,382 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading;
 
-namespace Tetris;
-
-public static class Tetris
+namespace Tetris
 {
-    // Set the size for the board
-    const int Width = 10, Height = 20;
-    public static string[,] board = new String[Width, Height];
-    
-    public static Dictionary<string, int[,]> Tetrominoes = new Dictionary<string, int[,]>
+    public static class Tetris
     {
-        { "I", new int[,] { { 1, 1, 1, 1 } } },             // I-Tetromino
-        { "O", new int[,] { { 1, 1 }, { 1, 1 } } },         // O-Tetromino
-        { "T", new int[,] { { 0, 1, 0 }, { 1, 1, 1 } } },   // T-Tetromino
-        { "S", new int[,] { { 0, 1, 1 }, { 1, 1, 0 } } },   // S-Tetromino
-        { "Z", new int[,] { { 1, 1, 0 }, { 0, 1, 1 } } },   // Z-Tetromino
-        { "J", new int[,] { { 1, 0, 0 }, { 1, 1, 1 } } },   // J-Tetromino
-        { "L", new int[,] { { 0, 0, 1 }, { 1, 1, 1 } } }    // L-Tetromino
-    };
-    
-    // int[,] currentTetromino = Tetrominoes["T"]; // T-Tetromino -> To acces the Dictionary
-    
-    // Randomizer for Tetrominoes
-    private static int[,] currentTetromino; // Store the active tetromino
-    private static int currentX, currentY; // Position of the active tetromino
+        // Board size (columns x rows)
+        const int Width = 10;
+        const int Height = 20;
+        public static string[,] board = new string[Width, Height];
 
-    private static Random random = new Random();
-    
-    // Gravity
-    private static Stopwatch gravityTimer = new Stopwatch();
-    private static int gravityInterval = 5000; // In Milliseconds
-    
-    // Gameloop boolean
-    public static bool gameOver = false;
-    
-    // Leave the tetris game loop when enter is pressed
-    private static bool exitGame = false;
-    
-    public static void Run()
-    {
-        // start gravity timer
-        gravityTimer.Start();
-        
-        // var inputThread = new Thread(() =>
-        // {
-        //     while (!exitGame)
-        //     {
-        //         if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
-        //         {
-        //             exitGame = true; // The background thread sets this
-        //         }
-        //     }
-        // });
-        //
-        // inputThread.IsBackground = true; // Mark as background so it won't block app exit
-        // inputThread.Start();
-        
-        // Restart Exit game bool 
-        if (exitGame)
-            exitGame = false;
-        
-        if (currentTetromino != null)
-            currentTetromino = null;
-        
-        // Remove the Path from the console
-        Console.Clear();
-        
-        // Cursor not Visible
-        Console.CursorVisible = false;
-        
-        // Initialize and display the board immediately
-        InitializeBoard();
-        DisplayBoard();
+        // Definition of tetromino shapes
+        public static Dictionary<string, int[,]> Tetrominoes = new Dictionary<string, int[,]>
+        {
+            { "I", new int[,] { { 1, 1, 1, 1 } } },
+            { "O", new int[,] { { 1, 1 }, { 1, 1 } } },
+            { "T", new int[,] { { 0, 1, 0 }, { 1, 1, 1 } } },
+            { "S", new int[,] { { 0, 1, 1 }, { 1, 1, 0 } } },
+            { "Z", new int[,] { { 1, 1, 0 }, { 0, 1, 1 } } },
+            { "J", new int[,] { { 1, 0, 0 }, { 1, 1, 1 } } },
+            { "L", new int[,] { { 0, 0, 1 }, { 1, 1, 1 } } }
+        };
 
-        // Run the Game-Loop
-        RunGameLoop();
-    }
-    
-    static void RunGameLoop()
-    {
-        while (!exitGame) // Exit if Enter is pressed
+        // Active tetromino and its position
+        private static int[,] currentTetromino;
+        private static int currentX, currentY;
+        private static Random random = new Random();
+
+        // Timer for gravity (e.g., 500ms per step)
+        private static Stopwatch gravityTimer = new Stopwatch();
+        private static int gravityInterval = 500; // in milliseconds
+
+        // Flags for game over and exit
+        public static bool gameOver = false;
+        private static bool exitGame = false;
+
+        // Thread-safe queue for keyboard inputs
+        private static ConcurrentQueue<ConsoleKey> inputQueue = new ConcurrentQueue<ConsoleKey>();
+
+        /// <summary>
+        /// Starts the game. The game state is fully reset and two threads are started:
+        /// one for input and one for the game loop.
+        /// </summary>
+        public static void Run()
+        {
+            ResetGameState();
+
+            // Clear any leftover key inputs (flush the input buffer)
+            while (Console.KeyAvailable)
+            {
+                Console.ReadKey(true);
+            }
+
+            // Prepare the console
+            Console.Clear();
+            Console.CursorVisible = false;
+
+            // Start the input thread (background thread)
+            Thread inputThread = new Thread(InputLoop) { IsBackground = true };
+            inputThread.Start();
+
+            // Run the game loop on the current thread
+            GameLoop();
+
+            // After the game ends, make the cursor visible again
+            Console.CursorVisible = true;
+        }
+
+        /// <summary>
+        /// Resets all relevant game variables to their initial state.
+        /// </summary>
+        public static void ResetGameState()
         {
             gameOver = false;
+            exitGame = false;
+            currentTetromino = null;
+            gravityTimer.Reset();
+            gravityTimer.Start();
+            InitializeBoard();
+        }
 
-            while (!gameOver)
+        /// <summary>
+        /// Initializes the board by marking all cells as empty ("░░").
+        /// </summary>
+        public static void InitializeBoard()
+        {
+            for (int x = 0; x < Width; x++)
+                for (int y = 0; y < Height; y++)
+                    board[x, y] = "░░";
+        }
+
+        /// <summary>
+        /// Continuously reads keyboard input and places it into a thread-safe queue.
+        /// Pressing the Enter key will exit the game.
+        /// </summary>
+        public static void InputLoop()
+        {
+            while (!exitGame)
             {
-                HandleInput();
-                
-                // Spawn new tetromino if necessary
+                if (Console.KeyAvailable)
+                {
+                    var key = Console.ReadKey(true).Key;
+                    if (key == ConsoleKey.Enter)
+                    {
+                        exitGame = true;
+                        break;
+                    }
+                    inputQueue.Enqueue(key);
+                }
+                else
+                {
+                    Thread.Sleep(10);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Main game loop. Processes input, moves the tetromino (including gravity),
+        /// redraws the board, and checks if any rows are full.
+        /// </summary>
+        public static void GameLoop()
+        {
+            while (!exitGame)
+            {
+                ProcessInput();
+
+                // If no active tetromino exists, spawn a new one.
                 if (currentTetromino == null)
+                {
                     SpawnTetromino();
-                
-                // Make the Tetromino drop after some time (gravity)
+                }
+
+                // Gravity: Move the tetromino down after the interval has passed.
                 if (gravityTimer.ElapsedMilliseconds >= gravityInterval)
                 {
-                    MoveTetromino(0, 1); // Move down
+                    MoveTetromino(0, 1);
                     gravityTimer.Restart();
                 }
-            
-                // TODO: Update the board array with the newly moved Tetrominoes 
-            
+
                 DisplayBoard();
+                Thread.Sleep(50);
 
-                if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Enter)
+                if (gameOver)
                 {
-                    DisplayLoadingScreen("Loading");
                     exitGame = true;
-                    break;
+                    Console.SetCursorPosition(0, Height + 1);
+                    Console.WriteLine("Game Over. Press any key to exit.");
+                    Console.ReadKey(true);
                 }
             }
-            
-            if (!gameOver || !exitGame)
-            {
-                Console.WriteLine("Game Over. Press R to restart or Enter to exit.");
-                var key = Console.ReadKey(true).Key;
-                if (key == ConsoleKey.R)
-                    ResetGame(); // Restart game
-                else if (key == ConsoleKey.Enter)
-                    exitGame = true; // Exit game
-            }
         }
-    }
-    
-    static void DisplayLoadingScreen(string message)
-    {
-        Console.Clear();
-        Console.WriteLine(message);
-    }
 
-    static void ResetGame()
-    {
-        // Reset any necessary variables
-        gameOver = false;
-
-        // enable spawning even after leaving the current game
-        currentTetromino = null; // Clear the active tetromino
-        
-        // Reinitialize the board or other game state if needed
-        InitializeBoard();
-    }
-
-    static void SpawnTetromino()
-    {
-        Debug.WriteLine("Inside of the SpawnTetromino");
-        // Pick a Random Tetromino
-        var tetrominoKeys = Tetrominoes.Keys.ToList();
-        string randomKey = tetrominoKeys[random.Next(tetrominoKeys.Count)];
-        currentTetromino = Tetrominoes[randomKey];
-        
-        // Calculate the starting position (Top Middle)
-        currentX = (Width / 2) - (currentTetromino.GetLength(1) / 2); // Center horizontally
-        currentY = 0; // Start at the top of the board
-
-        // Can Tetromino be placed
-        if (!CanPlaceTetromino(currentTetromino, currentX, currentY))
+        /// <summary>
+        /// Processes all key presses stored in the queue.
+        /// Supports left (A), right (D), down (S) and rotation (W).
+        /// </summary>
+        public static void ProcessInput()
         {
-            gameOver = true; // No space to spawn, game over
-            return;
-        }
-        
-        // Place the tetromino on the board
-        PlaceTetromino(currentTetromino, currentX, currentY);
-    }
-
-    static bool CanPlaceTetromino(int[,] tetromino, int posX, int posY)
-    {
-        for (int y = 0; y < tetromino.GetLength(0); y++)
-        {
-            for (int x = 0; x < tetromino.GetLength(1); x++)
+            while (inputQueue.TryDequeue(out ConsoleKey key))
             {
-                if (tetromino[y, x] == 1) // Only check filled cells
+                switch (key)
                 {
-                    int boardX = posX + x;
-                    int boardY = posY + y;
-
-                    // Check if out of bounds
-                    if (boardX < 0 || boardX >= Width || boardY < 0 || boardY >= Height)
-                    {
-                        return false; // Out of bounds
-                    }
-
-                    // Check for collision
-                    if (board[boardY, boardX] != "░░") // Adjusted board access
-                    {
-                        return false; // Colliding with an existing block
-                    }
+                    case ConsoleKey.A:
+                        MoveTetromino(-1, 0);
+                        break;
+                    case ConsoleKey.D:
+                        MoveTetromino(1, 0);
+                        break;
+                    case ConsoleKey.S:
+                        MoveTetromino(0, 1);
+                        break;
+                    case ConsoleKey.W:
+                        RotateTetromino();
+                        break;
+                    default:
+                        break;
                 }
             }
         }
-        return true;
-    }
-    
-    static void PlaceTetromino(int[,] tetromino, int posX, int posY)
-    {
-        // Corrected version:
-        for (int y = 0; y < tetromino.GetLength(0); y++)
+
+        /// <summary>
+        /// Spawns a new random tetromino and sets it at the starting position.
+        /// If the tetromino cannot be placed, the game is set to game over.
+        /// </summary>
+        public static void SpawnTetromino()
         {
-            for (int x = 0; x < tetromino.GetLength(1); x++)
+            var keys = Tetrominoes.Keys.ToList();
+            string randomKey = keys[random.Next(keys.Count)];
+            currentTetromino = Tetrominoes[randomKey];
+            currentX = (Width / 2) - (currentTetromino.GetLength(1) / 2);
+            currentY = 0;
+
+            if (!CanPlaceTetromino(currentTetromino, currentX, currentY))
             {
-                if (tetromino[y, x] == 1) // Notice: we check [y, x] here
-                {
-                    board[posX + x, posY + y] = "██"; // Use [x, y] for the board
-                }
+                gameOver = true;
+                return;
             }
-        }
-    }
-
-    static void MoveTetromino(int deltaX, int deltaY)
-    {
-        // Calculate the new position
-        int newX = currentX + deltaX;
-        int newY = currentY + deltaY;
-        
-        // Check if the new position is valid
-        if (CanPlaceTetromino(currentTetromino, newX, newY))
-        {
-            // Clear the current position
-            ClearTetromino(currentTetromino, currentX, currentY);
-
-            // Update the position
-            currentX = newX;
-            currentY = newY;
-
-            // Place the tetromino at the new position
             PlaceTetromino(currentTetromino, currentX, currentY);
         }
-        else 
-        {
-            // Lock the tetromino and spawn a new one
-            LockTetromino();
-            SpawnTetromino();
-        }
-    }
-    
-    static void LockTetromino()
-    {
-        for (int y = 0; y < currentTetromino.GetLength(0); y++)
-        {
-            for (int x = 0; x < currentTetromino.GetLength(1); x++)
-            {
-                if (currentTetromino[y, x] == 1) // Only lock filled cells
-                {
-                    int boardX = currentX + x;
-                    int boardY = currentY + y;
 
-                    // Ensure within bounds before locking
-                    if (boardX >= 0 && boardX < Width && boardY >= 0 && boardY < Height)
+        /// <summary>
+        /// Checks if a tetromino can be placed at the desired position.
+        /// It verifies that there are no collisions and that the tetromino stays within the board.
+        /// </summary>
+        public static bool CanPlaceTetromino(int[,] tetromino, int posX, int posY)
+        {
+            for (int y = 0; y < tetromino.GetLength(0); y++)
+            {
+                for (int x = 0; x < tetromino.GetLength(1); x++)
+                {
+                    if (tetromino[y, x] == 1)
                     {
-                        board[boardY, boardX] = "██"; // Lock the cell
+                        int boardX = posX + x;
+                        int boardY = posY + y;
+                        if (boardX < 0 || boardX >= Width || boardY < 0 || boardY >= Height)
+                            return false;
+                        if (board[boardX, boardY] != "░░")
+                            return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Places the given tetromino on the board at the specified position (posX, posY).
+        /// </summary>
+        public static void PlaceTetromino(int[,] tetromino, int posX, int posY)
+        {
+            for (int y = 0; y < tetromino.GetLength(0); y++)
+            {
+                for (int x = 0; x < tetromino.GetLength(1); x++)
+                {
+                    if (tetromino[y, x] == 1)
+                    {
+                        int boardX = posX + x;
+                        int boardY = posY + y;
+                        board[boardX, boardY] = "██";
                     }
                 }
             }
         }
 
-        // Clear any filled rows
-        ClearFilledRows();
-
-        // Reset the current tetromino
-        currentTetromino = null;
-    }
-    
-    static void ClearFilledRows()
-    {
-        for (int y = 0; y < Height; y++)
+        /// <summary>
+        /// Clears the tetromino from its current position on the board.
+        /// </summary>
+        public static void ClearTetromino(int[,] tetromino, int posX, int posY)
         {
-            bool isRowFull = true;
-
-            // Check if row y is full
-            for (int x = 0; x < Width; x++)
+            for (int y = 0; y < tetromino.GetLength(0); y++)
             {
-                // Use board[x, y], not board[y, x]
-                if (board[x, y] == "░░")
+                for (int x = 0; x < tetromino.GetLength(1); x++)
                 {
-                    isRowFull = false;
-                    break;
+                    if (tetromino[y, x] == 1)
+                    {
+                        int boardX = posX + x;
+                        int boardY = posY + y;
+                        board[boardX, boardY] = "░░";
+                    }
                 }
             }
+        }
 
-            // If row is full, clear it and shift downward
-            if (isRowFull)
+        /// <summary>
+        /// Attempts to move the active tetromino in the desired direction.
+        /// If the movement (especially downward) is not possible, the tetromino is locked and a new one is spawned.
+        /// </summary>
+        public static void MoveTetromino(int deltaX, int deltaY)
+        {
+            int newX = currentX + deltaX;
+            int newY = currentY + deltaY;
+
+            if (CanPlaceTetromino(currentTetromino, newX, newY))
             {
-                // Clear row y
+                ClearTetromino(currentTetromino, currentX, currentY);
+                currentX = newX;
+                currentY = newY;
+                PlaceTetromino(currentTetromino, currentX, currentY);
+            }
+            else
+            {
+                // If the tetromino cannot move down further, lock it and spawn a new one.
+                if (deltaY == 1)
+                {
+                    LockTetromino();
+                    currentTetromino = null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Locks the current tetromino (making it permanent on the board)
+        /// and then checks for full rows.
+        /// </summary>
+        public static void LockTetromino()
+        {
+            ClearFilledRows();
+        }
+
+        /// <summary>
+        /// Checks from the bottom up if any row is full. If a row is full,
+        /// it clears the row and shifts all rows above it downward.
+        /// </summary>
+        public static void ClearFilledRows()
+        {
+            for (int y = Height - 1; y >= 0; y--)
+            {
+                bool full = true;
                 for (int x = 0; x < Width; x++)
                 {
-                    board[x, y] = "░░";
-                }
-
-                // Move everything above row y down by 1
-                for (int row = y; row > 0; row--)
-                {
-                    for (int col = 0; col < Width; col++)
+                    if (board[x, y] == "░░")
                     {
-                        board[col, row] = board[col, row - 1];
+                        full = false;
+                        break;
                     }
                 }
-                // Top row empty
-                for (int col = 0; col < Width; col++)
+                if (full)
                 {
-                    board[col, 0] = "░░";
-                }
-            }
-        }
-    }
-    
-    static void ClearTetromino(int[,] tetromino, int posX, int posY)
-    {
-        for (int y = 0; y < tetromino.GetLength(0); y++)
-        {
-            for (int x = 0; x < tetromino.GetLength(1); x++)
-            {
-                if (tetromino[y, x] == 1) // Only clear filled cells
-                {
-                    int boardX = posX + x;
-                    int boardY = posY + y;
-
-                    // Ensure within bounds before clearing
-                    if (boardX >= 0 && boardX < Width && boardY >= 0 && boardY < Height)
+                    // Shift all rows above the current row down by one.
+                    for (int row = y; row > 0; row--)
                     {
-                        board[boardX, boardY] = "░░"; // Clear the cell
+                        for (int x = 0; x < Width; x++)
+                        {
+                            board[x, row] = board[x, row - 1];
+                        }
                     }
+                    // Clear the top row.
+                    for (int x = 0; x < Width; x++)
+                    {
+                        board[x, 0] = "░░";
+                    }
+                    // Re-check the same row as it now contains the shifted row.
+                    y++;
                 }
             }
         }
-    }
 
-    // TODO: Implement rotation 
-    static void RotateTetromino()
-    {
-        
-    }
-    
-    static void DisplayBoard()
-    {
-        for (int y = 0; y < Height; y++)
+        /// <summary>
+        /// Rotates the current tetromino 90° clockwise, if there is enough space at the current position.
+        /// </summary>
+        public static void RotateTetromino()
         {
-            for (int x = 0; x < Width; x++)
+            int rows = currentTetromino.GetLength(0);
+            int cols = currentTetromino.GetLength(1);
+            int[,] rotated = new int[cols, rows];
+
+            for (int y = 0; y < rows; y++)
             {
-                // Use SetCursorPosition to get rid of the Flickering
-                Console.SetCursorPosition(x * 2, y); // x * 2 for wider cells
-                Console.Write(board[x, y]);
+                for (int x = 0; x < cols; x++)
+                {
+                    rotated[x, rows - y - 1] = currentTetromino[y, x];
+                }
+            }
+
+            if (CanPlaceTetromino(rotated, currentX, currentY))
+            {
+                ClearTetromino(currentTetromino, currentX, currentY);
+                currentTetromino = rotated;
+                PlaceTetromino(currentTetromino, currentX, currentY);
             }
         }
-    }
-    
-    static void InitializeBoard()
-    {
-        for (int y = 0; y < Height; y++)
-        for (int x = 0; x < Width; x++)
-            board[x, y] = "░░"; // Empty cells
-    }
-    
-    static void HandleInput()
-    {
-        // Exit if Keys are not avalaible
-        if (!Console.KeyAvailable) return;
-        
-        // Save the currently pressed key
-        var key = Console.ReadKey(true);
 
-        switch (key.Key)
+        /// <summary>
+        /// Displays the board on the console.
+        /// </summary>
+        public static void DisplayBoard()
         {
-            case ConsoleKey.A:
-                MoveTetromino(-1, 0);
-                break;
-            case ConsoleKey.D:
-                MoveTetromino(1, 0);
-                break;
-            case ConsoleKey.S:
-                MoveTetromino(0, -1);
-                break;
+            for (int y = 0; y < Height; y++)
+            {
+                for (int x = 0; x < Width; x++)
+                {
+                    Console.SetCursorPosition(x * 2, y); // Multiply x by 2 for wider cells
+                    Console.Write(board[x, y]);
+                }
+            }
         }
     }
 }
